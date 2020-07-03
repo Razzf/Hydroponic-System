@@ -1,6 +1,42 @@
 #include <Arduino.h>
+/*-----( Import needed libraries )-------------------------------------------------------------------------------------------------*/
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+
+/*-----( Declare Constants )-------------------------------------------------------------------------------------------------------*/
+int DropPh = A0;              //pin that turns on pump motor with base solution
+int IncreasePh = A1;          //pin that turns on pump motor with acid solution
+int pHpin = A3;               //pin that sends signals to pH meter
+float offset = 2.97;          //the offset to account for variability of pH meter
+float offset2 = 0;            //offset after calibration
+float slope = 0.59;           //slope of the calibration line
+int fillTime = 10;            //time to fill pump tubes with acid/base after cleaning... pumps at 1.2 mL/sec
+int delayTime = 10;           //time to delay between pumps of acid/base in seconds
+int smallAdjust = 1;          //number of seconds to pump in acid/base to adjust pH when pH is off by 0.3-1 pH
+int largeAdjust = 3;          //number of seconds to pump in acid/base to adjust pH when pH is off by > 1 pH
+int negative = 0;             //indicator if the calibration algorithm should be + or - the offset (if offset is negative or not)
+
+/*-----( Declare objects )---------------------------------------------------------------------------------------------------------*/
+
+
+/*-----( Declare Variables )-------------------------------------------------------------------------------------------------------*/
+float pHvalue;                //reads the voltage of the pH probe
+float pHregulate;             //holds value that the user wants the pH to stay at throughout reaction
+int regulatorPump;            //Pump in use to increase or drop the ph value
+float deltaPH;                //holds the value of the difference between pHregulate and pHvalue
+float pH4val;                 //value for calibration at pH4
+float pH7val;                 //value for calibration at pH7
+float pH10val;                //value for calibration at pH10
+int pHavg[10];                //array to find an average pH of 10 meter readings
+int temp;                     //temporary place holder used to sort array from small to large
+unsigned long int avgValue;   //stores the average value of the 6 middle pH array readings
+
+
+
+
+
 
 float CalibrationEC=1.38; //EC value of Calibration solution is s/cm
 
@@ -71,6 +107,10 @@ float pH;
 void setup()
 {
   Serial.begin(9600);
+  pinMode(DropPh, OUTPUT);
+  pinMode(IncreasePh, OUTPUT);
+
+
   pinMode(TempProbeNegative , OUTPUT ); //seting ground pin as output for tmp probe
   digitalWrite(TempProbeNegative , LOW );//Seting it to ground so it can sink current
   pinMode(TempProbePossitive , OUTPUT );//ditto but for positive
@@ -87,49 +127,206 @@ void setup()
   // Consule Read-Me for Why, or just accept it as true
   R1=(R1+Ra);// Taking into acount Powering Pin Resitance
 
-  myserial.begin(9600);                               //set baud rate for the software serial port to 9600
-  inputstring.reserve(10);                            //set aside some bytes for receiving data from the PC
-  sensorstring.reserve(30);   
-}
-
-void serialEvent() {                                  //if the hardware serial port_0 receives a char
-  inputstring = Serial.readStringUntil(13);           //read the string until we see a <CR>
-  input_string_complete = true;                       //set the flag used to tell if we have received a completed string from the PC
 }
 
 
 
-void ReadPH()
+void readPH() /*--(Subroutine, reads current value of pH Meter)-----------------------------------------------------------------*/
 {
-  for(int i=0;i<10;i++) 
-  { 
-    buf[i]=analogRead(analogInPin);
+  for (int i = 0; i < 10; i++)
+  {
+    pHavg[i] = analogRead(pHpin);
     delay(10);
   }
-  for(int i=0;i<9;i++)
+
+  for (int i = 0; i < 9; i++)
   {
-    for(int j=i+1;j<10;j++)
+    for (int j = i + 1; j < 10; j++)
     {
-      if(buf[i]>buf[j])
+      if (pHavg[i] > pHavg[j])
       {
-        temp=buf[i];
-        buf[i]=buf[j];
-        buf[j]=temp;
+        temp = pHavg[i];
+        pHavg[i] = pHavg[j];
+        pHavg[j] = temp;
       }
     }
   }
+  avgValue = 0;
+  for (int i = 2; i < 8; i++)
+  {
+    avgValue += pHavg[i];
+  }
+  pHvalue = (float)avgValue * 5.0 / 1024 / 6;
 
-  avgValue=0;
+  if (negative == 0)
+  {
+    pHvalue = (slope * 3.5 * pHvalue + offset + offset2);
+  }
+  else
+  {
+    pHvalue = (slope * 3.5 * pHvalue - offset + offset2);
+  }
+}
 
-  for(int i=2;i<8;i++)
-  avgValue+=buf[i];
+void regulatePH(float DesiredPH)
+{
+  readPH();
+  deltaPH = (DesiredPH - pHvalue);
 
-  float pHVol=(float)avgValue*5.0/1024/6;
-  phValue = -5.70 * pHVol + 21.34;
-  Serial.print("sensor = ");
-  Serial.println(phValue);
+  if (deltaPH < 0)
+  {
+    deltaPH = deltaPH * (-1);
+    regulatorPump = DropPh;
 
-  delay(20);
+  }
+  else
+  {
+    regulatorPump = IncreasePh;
+  }
+  
+recheck:
+  if (deltaPH > 0.3)
+  {
+    digitalWrite(regulatorPump, HIGH);
+    if (deltaPH > 1)
+    {
+      for (int i = 0; i < largeAdjust; i++)
+      {
+        readPH();
+
+        deltaPH = abs(DesiredPH - pHvalue);
+        if (deltaPH < 1)
+        {
+          digitalWrite(regulatorPump, LOW);
+          goto recheck;
+        }
+        delay(1000);
+      }
+    }
+    else //if difference in pH is between 0.3 and 1
+    {
+      for (int i = 0; i < smallAdjust; i++) //loop for smaller pH adjust time
+      {
+        readPH();
+        deltaPH = abs(DesiredPH - pHvalue);
+        if (deltaPH < 0.3)
+        {
+          digitalWrite(regulatorPump, LOW);
+          goto recheck;
+        }
+        delay(1000);
+      }
+    }
+
+    digitalWrite(regulatorPump, LOW);
+
+    for (int i = 0; i < delayTime * 4; i++) //delay "delayTime" seconds to allow new solution to mix
+    {
+      delay(1000);
+    }
+  }
+}
+
+void CleanPump(int pump) /*--(Subroutine, cleans pump w/ DI water)--*/
+  {
+    //print out instructions for cleaning pump before use
+    //wait for user input confirmation
+    delay(500);
+    digitalWrite(pump, HIGH);
+    for (int i = 0; i < 15; i++)
+    {
+      delay(1000);
+    }
+  digitalWrite(pump, LOW);
+  //print out instructions to clear ph meter of DI water
+  //wait for user input confirmation
+  digitalWrite(pump, HIGH);
+  for(int i=0; i<10; i++)
+    {
+      delay(1000);
+    }
+  digitalWrite(pump, LOW);
+}
+
+void SetUpPump(int pump) /*--(Subroutine, fills pump with solution)--*/
+{
+  //print out instructions for setting up pump before use
+  //wait for user input confirmation
+  delay(500);
+  digitalWrite(pump, HIGH);
+  for (int i = 0; i < fillTime; i++)
+  {
+    delay(1000);
+  }
+  digitalWrite(pump, LOW);
+}
+
+void FlashWait()
+{
+  for (int i = 0; i < 3; i++)
+  {
+    delay(1000);
+  }
+}
+
+void CalibratePhMeter() /*--(Subroutine, calibrates the pH meter using system of equations)----------------------------------------*/
+{
+  delay(50);
+  //instruccions for inserting ph meter in 4ph solution
+  //wait confirmation input from the user
+  FlashWait();
+  //calibration for ph4 starts
+  for (double i = 100; i > 0; i--)
+  {
+    readPH();
+    pH4val = pHvalue;
+  }
+  delay(50);
+  //instrucctions for washing ph meter with di water
+  //wait confirmation input from the user
+  delay(50);
+  //instruccions for inserting ph meter in 7ph solution
+  //wait confirmation input from the user
+  FlashWait();
+  //calibration for ph7 starts
+  for (double i = 100; i > 0; i--)
+  {
+    readPH();
+    pH7val = pHvalue;
+  }
+  delay(50);
+  //instrucctions for washing ph meter with di water
+  //wait confirmation input from the user
+  delay(50);
+  //instruccions for inserting ph meter in 10ph solution
+  //wait confirmation input from the user
+  FlashWait();
+  delay(50);
+  //calibration for ph10 starts
+  for (double i = 100; i > 0; i--)
+  {
+    readPH();
+    pH10val = pHvalue;
+  }
+  delay(50);
+  //instrucctions for washing ph meter with di water
+  //wait confirmation input from the user
+  delay(50);
+  //instruccions for inserting ph meter in wanted solution
+  //wait confirmation input from the user
+  FlashWait();
+  slope = 6 / (pH10val - pH4val);
+  offset = (abs(11 - ((pH4val + pH7val) * slope))) / 2;
+  offset2 = slope * 2.97;
+  slope = 0.59 * slope;
+  if ((pH4val + pH7val) > 11)
+  {
+    negative = 1;
+  }
+  else
+  {
+    negative = 0;
+  }
 }
 
 void CalibrateEC()
