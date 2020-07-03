@@ -45,6 +45,29 @@ float buffer=0;
 
 bool ECcalibrated = false;
 
+// ph code
+const int analogInPin = A0; 
+int sensorValue = 0; 
+unsigned long int avgValue;
+float phValue = 0.0;
+float b;
+int buf[10],temp;
+
+//ph calibration
+
+#include <SoftwareSerial.h>                           //we have to include the SoftwareSerial library, or else we can't use it
+#define rx 2                                          //define what pin rx is going to be
+#define tx 3                                          //define what pin tx is going to be
+
+SoftwareSerial myserial(rx, tx);                      //define how the soft serial port is going to work
+
+
+String inputstring = "";                              //a string to hold incoming data from the PC
+String sensorstring = "";                             //a string to hold the data from the Atlas Scientific product
+boolean input_string_complete = false;                //have we received all the data from the PC
+boolean sensor_string_complete = false;               //have we received all the data from the Atlas Scientific product
+float pH;   
+
 void setup()
 {
   Serial.begin(9600);
@@ -63,6 +86,50 @@ void setup()
   //** Adding Digital Pin Resistance to [25 ohm] to the static Resistor *********//
   // Consule Read-Me for Why, or just accept it as true
   R1=(R1+Ra);// Taking into acount Powering Pin Resitance
+
+  myserial.begin(9600);                               //set baud rate for the software serial port to 9600
+  inputstring.reserve(10);                            //set aside some bytes for receiving data from the PC
+  sensorstring.reserve(30);   
+}
+
+void serialEvent() {                                  //if the hardware serial port_0 receives a char
+  inputstring = Serial.readStringUntil(13);           //read the string until we see a <CR>
+  input_string_complete = true;                       //set the flag used to tell if we have received a completed string from the PC
+}
+
+
+
+void ReadPH()
+{
+  for(int i=0;i<10;i++) 
+  { 
+    buf[i]=analogRead(analogInPin);
+    delay(10);
+  }
+  for(int i=0;i<9;i++)
+  {
+    for(int j=i+1;j<10;j++)
+    {
+      if(buf[i]>buf[j])
+      {
+        temp=buf[i];
+        buf[i]=buf[j];
+        buf[j]=temp;
+      }
+    }
+  }
+
+  avgValue=0;
+
+  for(int i=2;i<8;i++)
+  avgValue+=buf[i];
+
+  float pHVol=(float)avgValue*5.0/1024/6;
+  phValue = -5.70 * pHVol + 21.34;
+  Serial.print("sensor = ");
+  Serial.println(phValue);
+
+  delay(20);
 }
 
 void CalibrateEC()
@@ -70,8 +137,8 @@ void CalibrateEC()
 
   i=1;
   buffer=0;
-  sensors.requestTemperatures();// Send the command to get temperatures
-  TemperatureStart=sensors.getTempCByIndex(0); //Stores Value in Variable
+  sensors.requestTemperatures();
+  TemperatureStart=sensors.getTempCByIndex(0);
 
   while(i<=10)
   {
@@ -89,10 +156,8 @@ void CalibrateEC()
   sensors.requestTemperatures();
   TemperatureFinish=sensors.getTempCByIndex(0);
 
-  //*************Compensating For Temperaure********************//
   EC =CalibrationEC*(1+(TemperatureCoef*(TemperatureFinish-25.0))) ;
 
-  //***************** Calculates R relating to Calibration fluid **************************//
   Vdrop= (((Vin)*(raw))/1024.0);
   Rc=(Vdrop*R1)/(Vin-Vdrop);
   Rc=Rc-Ra;
@@ -109,7 +174,7 @@ void CalibrateEC()
 }
 
 
-void UpdateData(){
+void ReadEC(){
   sensors.requestTemperatures();
   Temperature=sensors.getTempCByIndex(0);
 
@@ -137,6 +202,6 @@ void loop()
   }
   else
   {
-    UpdateData();
+    ReadEC();
   }
 }
