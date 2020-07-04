@@ -36,6 +36,7 @@ int ECPower = A3;
 //Tranchen  [Australia]  PPMconversion:  0.7
 float PPMconversion =0.7;
 float TemperatureCoef = 0.019; //this changes depending on what chemical we are measuring
+float minEC = 0; //minimum EC
 
 
 
