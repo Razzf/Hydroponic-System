@@ -366,6 +366,32 @@ void ReadEC(){
   }
 }
 
+void ShowInLcd()
+{
+  ReadEC();
+  readPH();
+
+  lcd.clear();
+
+  lcd.setCursor(0, 0);
+  lcd.print('Temperature: ');
+
+  lcd.setCursor(15, 0);
+  lcd.print(GetTemperature());
+
+  lcd.setCursor(0, 1);
+  lcd.print('EC: ');
+
+  lcd.setCursor(5, 1);
+  lcd.print(EC25);
+
+  lcd.setCursor(7, 1);
+  lcd.print('Ph: ');
+
+  lcd.setCursor(14, 1);
+  lcd.print(pHvalue);
+}
+
 
 void loop()
 {
