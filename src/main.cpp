@@ -33,8 +33,7 @@ int ECPower =A3;
 //Tranchen  [Australia]  PPMconversion:  0.7
 float PPMconversion=0.7;
 float TemperatureCoef = 0.019; //this changes depending on what chemical we are measuring
-int i=0;
-float buffer=0;
+
 
 
 
@@ -64,6 +63,8 @@ int ppm = 0;
 float raw = 0; //raw value read by EC meter, this value is between 0 and 1024
 float Vdrop = 0; //obtained voltage by ECpin
 float Rc = 0;
+int i=0;
+float buffer=0;
 bool ECcalibrated = false;
 
 
