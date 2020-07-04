@@ -140,8 +140,10 @@ void readPH() /*--(Subroutine, reads current value of pH Meter)-----------------
   }
 }
 
-void tryNutrients(float min, float max)
+void tryNutrients(float min, float max, int iterations, float SegsInterval) //func for apply nutrients
 {
+
+  float MiliSegsDelay = int(SegsInterval * 1000)
   ReadEC();
 recheck:
   if (EC25 < min)
@@ -150,7 +152,7 @@ recheck:
     delay(10);
     digitalWrite(nutrientsPump, LOW);
 
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < iterations; i++)
     {
       readPH();
 
@@ -159,7 +161,7 @@ recheck:
         digitalWrite(nutrientsPump, LOW);
         goto recheck;
       }
-      delay(10000);
+      delay(MiliSegsDelay);
     }
   }
 }
