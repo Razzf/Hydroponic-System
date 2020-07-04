@@ -8,12 +8,13 @@
             "includePath": [
                 "C:/Users/felix/Documents/PlatformIO/Projects/Hydroponic System/include",
                 "C:/Users/felix/Documents/PlatformIO/Projects/Hydroponic System/src",
+                "C:/Users/felix/.platformio/lib/LiquidCrystal_I2C_ID576",
+                "C:/Users/felix/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
                 "C:/Users/felix/Documents/PlatformIO/Projects/Hydroponic System/.pio/libdeps/uno/DallasTemperature_ID54",
                 "C:/Users/felix/Documents/PlatformIO/Projects/Hydroponic System/.pio/libdeps/uno/OneWire_ID1",
                 "C:/Users/felix/.platformio/packages/framework-arduino-avr/cores/arduino",
                 "C:/Users/felix/.platformio/packages/framework-arduino-avr/variants/standard",
                 "C:/Users/felix/.platformio/lib/Keypad_ID165/src",
-                "C:/Users/felix/.platformio/lib/LiquidCrystal_I2C_ID576",
                 "C:/Users/felix/.platformio/lib/LiquidCrystal_ID887/src",
                 "C:/Users/felix/.platformio/lib/OneWire_ID1",
                 "C:/Users/felix/.platformio/lib/Servo_ID883/src",
@@ -21,7 +22,6 @@
                 "C:/Users/felix/.platformio/packages/framework-arduino-avr/libraries/HID/src",
                 "C:/Users/felix/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
                 "C:/Users/felix/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
-                "C:/Users/felix/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
                 "C:/Users/felix/.platformio/packages/tool-unity",
                 ""
             ],
@@ -30,12 +30,13 @@
                 "path": [
                     "C:/Users/felix/Documents/PlatformIO/Projects/Hydroponic System/include",
                     "C:/Users/felix/Documents/PlatformIO/Projects/Hydroponic System/src",
+                    "C:/Users/felix/.platformio/lib/LiquidCrystal_I2C_ID576",
+                    "C:/Users/felix/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
                     "C:/Users/felix/Documents/PlatformIO/Projects/Hydroponic System/.pio/libdeps/uno/DallasTemperature_ID54",
                     "C:/Users/felix/Documents/PlatformIO/Projects/Hydroponic System/.pio/libdeps/uno/OneWire_ID1",
                     "C:/Users/felix/.platformio/packages/framework-arduino-avr/cores/arduino",
                     "C:/Users/felix/.platformio/packages/framework-arduino-avr/variants/standard",
                     "C:/Users/felix/.platformio/lib/Keypad_ID165/src",
-                    "C:/Users/felix/.platformio/lib/LiquidCrystal_I2C_ID576",
                     "C:/Users/felix/.platformio/lib/LiquidCrystal_ID887/src",
                     "C:/Users/felix/.platformio/lib/OneWire_ID1",
                     "C:/Users/felix/.platformio/lib/Servo_ID883/src",
@@ -43,7 +44,6 @@
                     "C:/Users/felix/.platformio/packages/framework-arduino-avr/libraries/HID/src",
                     "C:/Users/felix/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
                     "C:/Users/felix/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
-                    "C:/Users/felix/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
                     "C:/Users/felix/.platformio/packages/tool-unity",
                     ""
                 ]

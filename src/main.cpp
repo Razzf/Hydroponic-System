@@ -1,4 +1,6 @@
 #include <Arduino.h>
+
+
 /*-----( Import needed libraries )-------------------------------------------------------------------------------------------------*/
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -8,6 +10,7 @@
 /*-----( Declare Constants )-------------------------------------------------------------------------------------------------------*/
 int DropPh = A0;              //pin that turns on pump motor with base solution
 int IncreasePh = A1;          //pin that turns on pump motor with acid solution
+int nutrientsPump;            //pin that turns on pump motor wtih nutrients
 int pHpin = A3;               //pin that sends signals to pH meter
 float offset = 2.97;          //the offset to account for variability of pH meter
 float offset2 = 0;            //offset after calibration
@@ -17,8 +20,24 @@ int delayTime = 10;           //time to delay between pumps of acid/base in seco
 int smallAdjust = 1;          //number of seconds to pump in acid/base to adjust pH when pH is off by 0.3-1 pH
 int largeAdjust = 3;          //number of seconds to pump in acid/base to adjust pH when pH is off by > 1 pH
 int negative = 0;             //indicator if the calibration algorithm should be + or - the offset (if offset is negative or not)
+float Vin = 5;
 
-/*-----( Declare objects )---------------------------------------------------------------------------------------------------------*/
+#define ONE_WIRE_BUS 8              
+const int TempProbePossitive = 10;  
+const int TempProbeNegative = 9; 
+int R1= 1000; //Do not Replace R1 with a resistor lower than 300 ohms
+int Ra=25; //Resistance of powering Pins
+int ECPin= A1;
+int ECGround=A2;
+int ECPower =A3;
+// Hana      [USA]        PPMconverion:  0.5
+// Eutech    [EU]          PPMconversion:  0.64
+//Tranchen  [Australia]  PPMconversion:  0.7
+float PPMconversion=0.7;
+float TemperatureCoef = 0.019; //this changes depending on what chemical we are measuring
+int i=0;
+float buffer=0;
+
 
 
 /*-----( Declare Variables )-------------------------------------------------------------------------------------------------------*/
@@ -34,67 +53,28 @@ int temp;                     //temporary place holder used to sort array from s
 unsigned long int avgValue;   //stores the average value of the 6 middle pH array readings
 
 
+float K = 0; //Cell Constant For Ec Measurements
 
-
-
-
-float CalibrationEC=1.38; //EC value of Calibration solution is s/cm
-
-int R1= 1000; //Do not Replace R1 with a resistor lower than 300 ohms
-int Ra=25; //Resistance of powering Pins
-int ECPin= A1;
-int ECGround=A2;
-int ECPower =A3;
-
-// Hana      [USA]        PPMconverion:  0.5
-// Eutech    [EU]          PPMconversion:  0.64
-//Tranchen  [Australia]  PPMconversion:  0.7
-float PPMconversion=0.7;
-
-float TemperatureCoef = 0.019; //this changes depending on what chemical we are measuring
-
-float K=2.88; //Cell Constant For Ec Measurements
-
-#define ONE_WIRE_BUS 8              
-const int TempProbePossitive = 10;  
-const int TempProbeNegative = 9;    
-
-OneWire oneWire(ONE_WIRE_BUS);
-DallasTemperature sensors(&oneWire);
-
-// variables for calibration
+// variables for EC calibration
 float TemperatureFinish=0;
 float TemperatureStart=0;
 
-float Temperature=10;
-float EC=0;
-float EC25 =0;
-int ppm =0;
-
-float raw= 0;
-float Vin= 5;
-float Vdrop= 0;
-float Rc= 0;
-
-int i=0;
-float buffer=0;
-
+float Temperature = 0;
+float EC = 0;
+float EC25 = 0;
+int ppm = 0;
+float raw = 0; //raw value read by EC meter, this value is between 0 and 1024
+float Vdrop = 0; //obtained voltage by ECpin
+float Rc = 0;
 bool ECcalibrated = false;
 
-//ph calibration
 
-#include <SoftwareSerial.h>                           //we have to include the SoftwareSerial library, or else we can't use it
-#define rx 2                                          //define what pin rx is going to be
-#define tx 3                                          //define what pin tx is going to be
-
-SoftwareSerial myserial(rx, tx);                      //define how the soft serial port is going to work
+/*-----( Declare objects )---------------------------------------------------------------------------------------------------------*/
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+LiquidCrystal_I2C lcd (0x20, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  //set the LCD address to 0x20 for a 20 chars and 4 line display
 
 
-String inputstring = "";                              //a string to hold incoming data from the PC
-String sensorstring = "";                             //a string to hold the data from the Atlas Scientific product
-boolean input_string_complete = false;                //have we received all the data from the PC
-boolean sensor_string_complete = false;               //have we received all the data from the Atlas Scientific product
-float pH;   
 
 void setup()
 {
@@ -160,6 +140,30 @@ void readPH() /*--(Subroutine, reads current value of pH Meter)-----------------
   }
 }
 
+void tryNutrients(float min, float max)
+{
+  ReadEC();
+recheck:
+  if (EC25 < min)
+  {
+    digitalWrite(nutrientsPump, HIGH);
+    delay(10);
+    digitalWrite(nutrientsPump, LOW);
+
+    for (int i = 0; i < 10; i++)
+    {
+      readPH();
+
+      if (EC25 > max)
+      {
+        digitalWrite(nutrientsPump, LOW);
+        goto recheck;
+      }
+      delay(10000);
+    }
+  }
+}
+
 void regulatePH(float DesiredPH)
 {
   readPH();
@@ -197,7 +201,7 @@ recheck:
     }
     else //if difference in pH is between 0.3 and 1
     {
-      for (int i = 0; i < smallAdjust; i++) //loop for smaller pH adjust time
+      for (int i = 0; i < smallAdjust; i++)
       {
         readPH();
         deltaPH = abs(DesiredPH - pHvalue);
@@ -212,7 +216,7 @@ recheck:
 
     digitalWrite(regulatorPump, LOW);
 
-    for (int i = 0; i < delayTime * 4; i++) //delay "delayTime" seconds to allow new solution to mix
+    for (int i = 0; i < delayTime * 4; i++)
     {
       delay(1000);
     }
@@ -253,60 +257,25 @@ void SetUpPump(int pump) /*--(Subroutine, fills pump with solution)--*/
   digitalWrite(pump, LOW);
 }
 
-void FlashWait()
-{
-  for (int i = 0; i < 3; i++)
-  {
-    delay(1000);
-  }
-}
-
-void CalibratePhMeter() /*--(Subroutine, calibrates the pH meter using system of equations)----------------------------------------*/
+void UpdatePhConst(float constPh) //function for setting up ph4, 7, 10 before calibration
 {
   delay(50);
   //instruccions for inserting ph meter in 4ph solution
   //wait confirmation input from the user
-  FlashWait();
-  //calibration for ph4 starts
+
+  //setting up constPh starts
   for (double i = 100; i > 0; i--)
   {
     readPH();
-    pH4val = pHvalue;
+    constPh = pHvalue;
   }
   delay(50);
   //instrucctions for washing ph meter with di water
   //wait confirmation input from the user
-  delay(50);
-  //instruccions for inserting ph meter in 7ph solution
-  //wait confirmation input from the user
-  FlashWait();
-  //calibration for ph7 starts
-  for (double i = 100; i > 0; i--)
-  {
-    readPH();
-    pH7val = pHvalue;
-  }
-  delay(50);
-  //instrucctions for washing ph meter with di water
-  //wait confirmation input from the user
-  delay(50);
-  //instruccions for inserting ph meter in 10ph solution
-  //wait confirmation input from the user
-  FlashWait();
-  delay(50);
-  //calibration for ph10 starts
-  for (double i = 100; i > 0; i--)
-  {
-    readPH();
-    pH10val = pHvalue;
-  }
-  delay(50);
-  //instrucctions for washing ph meter with di water
-  //wait confirmation input from the user
-  delay(50);
-  //instruccions for inserting ph meter in wanted solution
-  //wait confirmation input from the user
-  FlashWait();
+}
+
+void CalibratePhMeter() /*--(Subroutine, calibrates the pH meter using system of equations)----------------------------------------*/
+{
   slope = 6 / (pH10val - pH4val);
   offset = (abs(11 - ((pH4val + pH7val) * slope))) / 2;
   offset2 = slope * 2.97;
@@ -321,13 +290,20 @@ void CalibratePhMeter() /*--(Subroutine, calibrates the pH meter using system of
   }
 }
 
-void CalibrateEC()
+float GetTemperature()
+{
+  sensors.requestTemperatures();
+  return sensors.getTempCByIndex(0);
+}
+
+void CalibrateEC(float ECsolution) //Ecsolutions refers to known EC in solution for calibration
 {
 
+recalibrate:
   i=1;
   buffer=0;
-  sensors.requestTemperatures();
-  TemperatureStart=sensors.getTempCByIndex(0);
+
+  TemperatureStart = GetTemperature()
 
   while(i<=10)
   {
@@ -342,30 +318,33 @@ void CalibrateEC()
 
   raw=(buffer/10);
 
-  sensors.requestTemperatures();
-  TemperatureFinish=sensors.getTempCByIndex(0);
+  TemperatureFinish = GetTemperature()
 
-  EC =CalibrationEC*(1+(TemperatureCoef*(TemperatureFinish-25.0))) ;
+  EC =ECsolution*(1+(TemperatureCoef*(TemperatureFinish-25.0))) ;
 
   Vdrop= (((Vin)*(raw))/1024.0);
   Rc=(Vdrop*R1)/(Vin-Vdrop);
   Rc=Rc-Ra;
-  K= 1000/(Rc*EC);
+  
 
   if (TemperatureStart==TemperatureFinish)
   {
     ECcalibrated = true;
+    K= 1000/(Rc*EC);
   }
   else
   {
     ECcalibrated = false;
+    goto recalibrate;
   }
 }
 
 
 void ReadEC(){
-  sensors.requestTemperatures();
-  Temperature=sensors.getTempCByIndex(0);
+
+  if (K != 0)
+  {
+    Temperature= GetTemperature()
 
   digitalWrite(ECPower,HIGH);
   raw= analogRead(ECPin);
@@ -380,6 +359,11 @@ void ReadEC(){
   EC25  =  EC/ (1+ TemperatureCoef*(Temperature-25.0));
   ppm=(EC25)*(PPMconversion*1000);
   delay(5000);
+  }
+  else
+  {
+    //the EC meter hasnt been calibrated
+  }
 }
 
 
