@@ -8,10 +8,10 @@
 #include <DallasTemperature.h>
 
 /*-----( Declare Constants )-------------------------------------------------------------------------------------------------------*/
-int DropPh = A0;              //pin that turns on pump motor with base solution
-int IncreasePh = A1;          //pin that turns on pump motor with acid solution
-int nutrientsPump;            //pin that turns on pump motor wtih nutrients
-int pHpin = A3;               //pin that sends signals to pH meter
+int DropPh = 9;              //pin that turns on pump motor with base solution
+int IncreasePh = 10;          //pin that turns on pump motor with acid solution
+int nutrientsPump = 11;            //pin that turns on pump motor wtih nutrients
+int pHpin = A0;               //pin that sends signals to pH meter
 float offset = 2.97;          //the offset to account for variability of pH meter
 float offset2 = 0;            //offset after calibration
 float slope = 0.59;           //slope of the calibration line
@@ -23,8 +23,6 @@ int negative = 0;             //indicator if the calibration algorithm should be
 float Vin = 5;
 
 #define ONE_WIRE_BUS 8              
-const int TempProbePossitive = 10;  
-const int TempProbeNegative = 9; 
 int R1= 1000; //Do not Replace R1 with a resistor lower than 300 ohms
 int Ra=25; //Resistance of powering Pins
 int ECPin= A1;
@@ -83,10 +81,6 @@ void setup()
   pinMode(IncreasePh, OUTPUT);
 
 
-  pinMode(TempProbeNegative , OUTPUT ); //seting ground pin as output for tmp probe
-  digitalWrite(TempProbeNegative , LOW );//Seting it to ground so it can sink current
-  pinMode(TempProbePossitive , OUTPUT );//ditto but for positive
-  digitalWrite(TempProbePossitive , HIGH );
   pinMode(ECPin,INPUT);
   pinMode(ECPower,OUTPUT);//Setting pin for sourcing current
   pinMode(ECGround,OUTPUT);//setting pin for sinking current
