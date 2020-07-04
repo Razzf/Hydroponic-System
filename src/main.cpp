@@ -355,7 +355,7 @@ void loop()
   unsigned long currentMillis = millis(); // grab current time
 
 
-  if ((unsigned long)(currentMillis - previousMillis) >= interv1) // read data every interval time
+  if ((unsigned long)(currentMillis - previousMillis) >= interv1) // show data every interval time
   {
 
     ShowInLcd();
@@ -363,7 +363,7 @@ void loop()
     previousMillis1 = millis();
   }
 
-  if ((unsigned long)(currentMillis - previousMillis) >= NutrientsInterval) // read data every interval time
+  if ((unsigned long)(currentMillis - previousMillis) >= NutrientsInterval) // tries to apply nutrients every interval time
   {
     if (!ECcalibrated)
     {
@@ -383,7 +383,7 @@ void loop()
     previousMillis2 = millis();
   }
 
-  if ((unsigned long)(currentMillis - previousMillis) >= PhInterv) // read data every interval time
+  if ((unsigned long)(currentMillis - previousMillis) >= PhInterv) // regulates ph every interval time
   {
 
     regulatePH(6); // 6 param for example
