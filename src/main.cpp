@@ -81,14 +81,6 @@ float buffer=0;
 
 bool ECcalibrated = false;
 
-// ph code
-const int analogInPin = A0; 
-int sensorValue = 0; 
-unsigned long int avgValue;
-float phValue = 0.0;
-float b;
-int buf[10],temp;
-
 //ph calibration
 
 #include <SoftwareSerial.h>                           //we have to include the SoftwareSerial library, or else we can't use it
