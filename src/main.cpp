@@ -254,12 +254,11 @@ void SetUpPump(int pump) /*--(Subroutine, fills pump with solution)--*/
   digitalWrite(pump, LOW);
 }
 
-void UpdatePhConst(float constPh) //function for setting up ph4, 7, 10 before calibration
+void UpdatePhConst(float constPh) //function for setting PhConstants (ph4Val, ph7Val and ph10Val) before calibration
 {
   delay(50);
   //instruccions for inserting ph meter in 4ph solution
   //wait confirmation input from the user
-
   //setting up constPh starts
   for (double i = 100; i > 0; i--)
   {
