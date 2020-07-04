@@ -22,7 +22,8 @@ int largeAdjust = 3;          //number of seconds to pump in acid/base to adjust
 int negative = 0;             //indicator if the calibration algorithm should be + or - the offset (if offset is negative or not)
 float Vin = 5;
 unsigned long interv1 = 1000;// the time we need to wait for excecuing EC block
-unsigned long interv2 = 10;// the time we need to wait for excecuting nutrints applying block
+unsigned long NutrientsInterval = 10;// the time we need to wait for excecuting nutrints applying block
+unsigned long PhInterv = 1000;// the time we need to wait for excecuing PH block
 
 #define ONE_WIRE_BUS 8              
 int R1 = 1000; //Do not Replace R1 with a resistor lower than 300 ohms
@@ -68,8 +69,9 @@ float Rc = 0;
 int i = 0;
 float buffer = 0;
 bool ECcalibrated = false;
-unsigned long previousMillis1 = 0; //prev milis for Ec Block
-unsigned long previousMillis2 = 0; //prev milos for Nutrients Block
+unsigned long previousMillis1 = 0; //prev milis for Showing data Block
+unsigned long previousMillis2 = 0; //prev milis for EC Block
+unsigned long previousMillis3 = 0; //prev milis for Ph Block
 
 
 /*-----( Declare objects )---------------------------------------------------------------------------------------------------------*/
@@ -137,32 +139,6 @@ void readPH() /*--(Subroutine, reads current value of pH Meter)-----------------
   else
   {
     pHvalue = (slope * 3.5 * pHvalue - offset + offset2);
-  }
-}
-
-void tryNutrients(float min, float max, int iterations, float SegsInterval) //func for apply nutrients
-{
-
-  float MiliSegsDelay = int(SegsInterval * 1000)
-  ReadEC();
-recheck:
-  if (EC25 < min)
-  {
-    digitalWrite(nutrientsPump, HIGH);
-    delay(10);
-    digitalWrite(nutrientsPump, LOW);
-
-    for (int i = 0; i < iterations; i++)
-    {
-      readPH();
-
-      if (EC25 > max)
-      {
-        digitalWrite(nutrientsPump, LOW);
-        goto recheck;
-      }
-      delay(MiliSegsDelay);
-    }
   }
 }
 
@@ -340,7 +316,6 @@ void ReadEC(){
 
   EC25  =  EC/ (1+ TemperatureCoef*(Temperature-25.0));
   ppm=(EC25)*(PPMconversion*1000);
-  delay(5000);
   }
   else
   {
@@ -382,6 +357,14 @@ void loop()
 
   if ((unsigned long)(currentMillis - previousMillis) >= interv1) // read data every interval time
   {
+
+    ShowInLcd();
+
+    previousMillis1 = millis();
+  }
+
+  if ((unsigned long)(currentMillis - previousMillis) >= NutrientsInterval) // read data every interval time
+  {
     if (!ECcalibrated)
     {
       CalibrateEC();
@@ -389,19 +372,22 @@ void loop()
     else
     {
       ReadEC();
+      if (EC25 < minEC)
+      {
+        digitalWrite(nutrientsPump, HIGH);
+        delay(10);
+        digitalWrite(nutrientsPump, LOW);
+      }
     }
-    previousMillis1 = millis();
-  }
-
-  if ((unsigned long)(currentMillis - previousMillis) >= interv2) // read data every interval time
-  {
-
-    tryNutrients(4, 6, 10, 60 * 10);
 
     previousMillis2 = millis();
   }
 
+  if ((unsigned long)(currentMillis - previousMillis) >= PhInterv) // read data every interval time
+  {
 
+    regulatePH(6); // 6 param for example
 
-
+    previousMillis3 = millis();
+  }
 }
