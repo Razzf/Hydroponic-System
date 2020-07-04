@@ -21,17 +21,19 @@ int smallAdjust = 1;          //number of seconds to pump in acid/base to adjust
 int largeAdjust = 3;          //number of seconds to pump in acid/base to adjust pH when pH is off by > 1 pH
 int negative = 0;             //indicator if the calibration algorithm should be + or - the offset (if offset is negative or not)
 float Vin = 5;
+unsigned long interv1 = 1000;// the time we need to wait for excecuing EC block
+unsigned long interv2 = 10;// the time we need to wait for excecuting nutrints applying block
 
 #define ONE_WIRE_BUS 8              
-int R1= 1000; //Do not Replace R1 with a resistor lower than 300 ohms
-int Ra=25; //Resistance of powering Pins
-int ECPin= A1;
-int ECGround=A2;
-int ECPower =A3;
+int R1 = 1000; //Do not Replace R1 with a resistor lower than 300 ohms
+int Ra = 25; //Resistance of powering Pins
+int ECPin = A1;
+int ECGround = A2;
+int ECPower = A3;
 // Hana      [USA]        PPMconverion:  0.5
 // Eutech    [EU]          PPMconversion:  0.64
 //Tranchen  [Australia]  PPMconversion:  0.7
-float PPMconversion=0.7;
+float PPMconversion =0.7;
 float TemperatureCoef = 0.019; //this changes depending on what chemical we are measuring
 
 
@@ -53,8 +55,8 @@ unsigned long int avgValue;   //stores the average value of the 6 middle pH arra
 float K = 0; //Cell Constant For Ec Measurements
 
 // variables for EC calibration
-float TemperatureFinish=0;
-float TemperatureStart=0;
+float TemperatureFinish = 0;
+float TemperatureStart = 0;
 
 float Temperature = 0;
 float EC = 0;
@@ -63,9 +65,11 @@ int ppm = 0;
 float raw = 0; //raw value read by EC meter, this value is between 0 and 1024
 float Vdrop = 0; //obtained voltage by ECpin
 float Rc = 0;
-int i=0;
-float buffer=0;
+int i = 0;
+float buffer = 0;
 bool ECcalibrated = false;
+unsigned long previousMillis1 = 0; //prev milis for Ec Block
+unsigned long previousMillis2 = 0; //prev milos for Nutrients Block
 
 
 /*-----( Declare objects )---------------------------------------------------------------------------------------------------------*/
@@ -100,6 +104,7 @@ void setup()
 
 void readPH() /*--(Subroutine, reads current value of pH Meter)-----------------------------------------------------------------*/
 {
+  Serial.print('caca');
   for (int i = 0; i < 10; i++)
   {
     pHavg[i] = analogRead(pHpin);
@@ -220,27 +225,6 @@ recheck:
   }
 }
 
-void CleanPump(int pump) /*--(Subroutine, cleans pump w/ DI water)--*/
-  {
-    //print out instructions for cleaning pump before use
-    //wait for user input confirmation
-    delay(500);
-    digitalWrite(pump, HIGH);
-    for (int i = 0; i < 15; i++)
-    {
-      delay(1000);
-    }
-  digitalWrite(pump, LOW);
-  //print out instructions to clear ph meter of DI water
-  //wait for user input confirmation
-  digitalWrite(pump, HIGH);
-  for(int i=0; i<10; i++)
-    {
-      delay(1000);
-    }
-  digitalWrite(pump, LOW);
-}
-
 void SetUpPump(int pump) /*--(Subroutine, fills pump with solution)--*/
 {
   //print out instructions for setting up pump before use
@@ -294,6 +278,8 @@ float GetTemperature()
 
 void CalibrateEC(float ECsolution) //Ecsolutions refers to known EC in solution for calibration
 {
+
+  //instruccions for preparing ECmeter an temp sensor in solution
 
 recalibrate:
   i=1;
@@ -388,15 +374,34 @@ void ShowInLcd()
   lcd.print(pHvalue);
 }
 
-
 void loop()
 {
-  if (!ECcalibrated)
+
+  unsigned long currentMillis = millis(); // grab current time
+
+
+  if ((unsigned long)(currentMillis - previousMillis) >= interv1) // read data every interval time
   {
-    CalibrateEC();
+    if (!ECcalibrated)
+    {
+      CalibrateEC();
+    }
+    else
+    {
+      ReadEC();
+    }
+    previousMillis1 = millis();
   }
-  else
+
+  if ((unsigned long)(currentMillis - previousMillis) >= interv2) // read data every interval time
   {
-    ReadEC();
+
+    tryNutrients(4, 6, 10, 60 * 10);
+
+    previousMillis2 = millis();
   }
+
+
+
+
 }
