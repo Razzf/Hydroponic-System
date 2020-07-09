@@ -10,7 +10,7 @@
 /*-----( Declare Constants )-------------------------------------------------------------------------------------------------------*/
 int DropPh = 9;              //pin that turns on pump motor with base solution
 int IncreasePh = 10;          //pin that turns on pump motor with acid solution
-int nutrientsPump = 11;            //pin that turns on pump motor wtih nutrients
+int nutrientsPump = 11;       //pin that turns on pump motor wtih nutrients
 int pHpin = A0;               //pin that sends signals to pH meter
 float offset = 2.97;          //the offset to account for variability of pH meter
 float offset2 = 0;            //offset after calibration
@@ -231,6 +231,9 @@ void UpdatePhConst(float constPh) //function for setting PhConstants (ph4Val, ph
   //wait confirmation input from the user
 }
 
+
+
+
 void CalibratePhMeter() /*--(Subroutine, calibrates the pH meter using system of equations)----------------------------------------*/
 {
   slope = 6 / (pH10val - pH4val);
@@ -262,7 +265,7 @@ recalibrate:
   i=1;
   buffer=0;
 
-  TemperatureStart = GetTemperature()
+  TemperatureStart = GetTemperature();
 
   while(i<=10)
   {
@@ -277,7 +280,7 @@ recalibrate:
 
   raw=(buffer/10);
 
-  TemperatureFinish = GetTemperature()
+  TemperatureFinish = GetTemperature();
 
   EC =ECsolution*(1+(TemperatureCoef*(TemperatureFinish-25.0))) ;
 
@@ -289,7 +292,7 @@ recalibrate:
   if (TemperatureStart==TemperatureFinish)
   {
     ECcalibrated = true;
-    K= 1000/(Rc*EC);
+    K = 1000/(Rc*EC);
   }
   else
   {
@@ -303,7 +306,7 @@ void ReadEC(){
 
   if (K != 0)
   {
-    Temperature= GetTemperature()
+    Temperature= GetTemperature();
 
   digitalWrite(ECPower,HIGH);
   raw= analogRead(ECPin);
@@ -356,7 +359,7 @@ void loop()
   unsigned long currentMillis = millis(); // grab current time
 
 
-  if ((unsigned long)(currentMillis - previousMillis) >= interv1) // show data every interval time
+  if ((unsigned long)(currentMillis - previousMillis1) >= interv1) // show data every interval time
   {
 
     ShowInLcd();
@@ -364,11 +367,11 @@ void loop()
     previousMillis1 = millis();
   }
 
-  if ((unsigned long)(currentMillis - previousMillis) >= NutrientsInterval) // tries to apply nutrients every interval time
+  if ((unsigned long)(currentMillis - previousMillis2) >= NutrientsInterval) // tries to apply nutrients every interval time
   {
     if (!ECcalibrated)
     {
-      CalibrateEC();
+      CalibrateEC(3.13); // 3.13 value for example( EC in known solution for calibration )
     }
     else
     {
@@ -376,7 +379,7 @@ void loop()
       if (EC25 < minEC)
       {
         digitalWrite(nutrientsPump, HIGH);
-        delay(10);
+        delay(100);
         digitalWrite(nutrientsPump, LOW);
       }
     }
@@ -384,7 +387,7 @@ void loop()
     previousMillis2 = millis();
   }
 
-  if ((unsigned long)(currentMillis - previousMillis) >= PhInterv) // regulates ph every interval time
+  if ((unsigned long)(currentMillis - previousMillis3) >= PhInterv) // regulates ph every interval time
   {
 
     regulatePH(6); // 6 param for example
