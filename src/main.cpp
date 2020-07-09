@@ -53,6 +53,8 @@ int pHavg[10];                //array to find an average pH of 10 meter readings
 int temp;                     //temporary place holder used to sort array from small to large
 unsigned long int avgValue;   //stores the average value of the 6 middle pH array readings
 
+float userECsolution;
+float userDesiredPh;
 
 float K = 0; //Cell Constant For Ec Measurements
 
@@ -403,7 +405,7 @@ void loop()
   {
     if (!ECcalibrated)
     {
-      CalibrateEC(3.13); // 3.13 value for example( EC in known solution for calibration )
+      CalibrateEC(userECsolution); 
     }
     else
     {
@@ -422,7 +424,7 @@ void loop()
   if ((unsigned long)(currentMillis - previousMillis3) >= PhInterv) // regulates ph every interval time
   {
 
-    regulatePH(6); // 6 param for example
+    regulatePH(userDesiredPh); 
 
     previousMillis3 = millis();
   }
