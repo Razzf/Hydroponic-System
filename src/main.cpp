@@ -215,7 +215,7 @@ void SetUpPump(int pump) /*--(Subroutine, fills pump with solution)--*/
   digitalWrite(pump, LOW);
 }
 
-void UpdatePhConst(float constPh) //function for setting PhConstants (ph4Val, ph7Val and ph10Val) before calibration
+void UpdatePh4() //function for setting PhConstants (ph4Val, ph7Val and ph10Val) before calibration
 {
   delay(50);
   //instruccions for inserting ph meter in 4ph solution
@@ -224,7 +224,39 @@ void UpdatePhConst(float constPh) //function for setting PhConstants (ph4Val, ph
   for (double i = 100; i > 0; i--)
   {
     readPH();
-    constPh = pHvalue;
+    pH4val = pHvalue;
+  }
+  delay(50);
+  //instrucctions for washing ph meter with di water
+  //wait confirmation input from the user
+}
+
+void UpdatePh7() //function for setting PhConstants (ph4Val, ph7Val and ph10Val) before calibration
+{
+  delay(50);
+  //instruccions for inserting ph meter in 4ph solution
+  //wait confirmation input from the user
+  //setting up constPh starts
+  for (double i = 100; i > 0; i--)
+  {
+    readPH();
+    pH7val = pHvalue;
+  }
+  delay(50);
+  //instrucctions for washing ph meter with di water
+  //wait confirmation input from the user
+}
+
+void UpdatePh10() //function for setting PhConstants (ph4Val, ph7Val and ph10Val) before calibration
+{
+  delay(50);
+  //instruccions for inserting ph meter in 4ph solution
+  //wait confirmation input from the user
+  //setting up constPh starts
+  for (double i = 100; i > 0; i--)
+  {
+    readPH();
+    pH10val = pHvalue;
   }
   delay(50);
   //instrucctions for washing ph meter with di water
